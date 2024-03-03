@@ -21,31 +21,24 @@ public class ProductService {
 
     public void createProduct(ProductRequest productRequest){
         Product product = Product.builder()
-                .id(UUID.randomUUID().toString())
                 .name(productRequest.getName())
                 .description(productRequest.getDescription())
                 .price(productRequest.getPrice())
                 .build();
-        log.info("Product was saved -> {}, {}", product.getId(), product.getName());
         productRepository.save(product);
     }
 
     public List<ProductResponse> getAllProduct(){
-        log.info("Show all products");
-        return mapToProduct(productRepository.findAll());
+        List<Product> products = productRepository.findAll();
+        return products.stream().map(this::mapToProductResponse).collect(Collectors.toList());
     }
 
-    private List<ProductResponse> mapToProduct(List<Product> products){
-        List<ProductResponse> productResponses = products.stream()
-                .map(product -> {
-                return ProductResponse.builder()
-                            .id(product.getId())
-                            .name(product.getName())
-                            .description(product.getDescription())
-                            .price(product.getPrice())
-                            .build();
-                }).collect(Collectors.toList());
-        return productResponses;
+    private ProductResponse mapToProductResponse(Product product){
+        ProductResponse productResponse = new ProductResponse(product.getId(),
+                product.getName(),
+                product.getDescription(),
+                product.getPrice());
+        return productResponse;
     }
 
 }

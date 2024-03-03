@@ -15,7 +15,7 @@ import java.math.BigDecimal;
 public class OrderInLineItems {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String skuCode;
     private BigDecimal price;

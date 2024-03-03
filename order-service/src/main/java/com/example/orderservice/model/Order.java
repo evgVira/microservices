@@ -14,7 +14,7 @@ import java.util.List;
 @Table(name = "t_order")
 public class Order {
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String orderNumber;
     @OneToMany(cascade = CascadeType.ALL)

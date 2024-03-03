@@ -1,6 +1,6 @@
 package com.example.orderservice.service;
 
-import com.example.orderservice.configuration.WebClientConfig;
+import com.example.orderservice.dto.InventoryResponse;
 import com.example.orderservice.dto.OrderInLineItemsDto;
 import com.example.orderservice.dto.OrderRequest;
 import com.example.orderservice.model.Order;
@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -23,20 +25,27 @@ import java.util.stream.Collectors;
 public class OrderService {
 
     private final OrderRepository orderRepository;
-    private final WebClient webClient;
+    private final WebClient.Builder webClientBuilder;
 
     public void placedOrder(OrderRequest orderRequest){
         Order order = new Order();
         order.setOrderNumber(UUID.randomUUID().toString());
-        order.setOrderInLineItemsList(orderRequest.getOrderInLineItemsDtoList().stream()
-                .map(this::mapToDtoRequest)
-                .collect(Collectors.toList()));
-        Boolean isInStock = webClient.get()
-                        .uri("http://localhost:8082/api/inventory")
+        List<OrderInLineItems> orderInLineItems = orderRequest.getOrderInLineItemsDtoList()
+                .stream()
+                .map(orderInLineItemsDto -> mapToDtoRequest(orderInLineItemsDto)).toList();
+        order.setOrderInLineItemsList(orderInLineItems);
+
+        List<String> skuCodes = order.getOrderInLineItemsList().stream()
+                .map(orderInLineItems1 -> orderInLineItems1.getSkuCode()).toList();
+
+        InventoryResponse[] inventoryResponseArray = webClientBuilder.build().get()
+                        .uri("http://inventory-service/api/inventory",
+                                uriBuilder -> uriBuilder.queryParam("skuCode", skuCodes).build())
                                 .retrieve()
-                                        .bodyToMono(Boolean.class)
+                                        .bodyToMono(InventoryResponse[].class)
                                                 .block();
-        if(isInStock){
+        boolean productInStock = Arrays.stream(inventoryResponseArray).allMatch(inventoryResponse -> inventoryResponse.isInStock());
+        if(productInStock){
             orderRepository.save(order);
             log.info("Order was saved -> {}", order.getOrderNumber());
         }else{
